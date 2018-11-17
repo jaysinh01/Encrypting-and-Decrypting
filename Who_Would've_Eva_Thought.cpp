@@ -132,6 +132,7 @@ uint32_t secretKeyGenerator(uint32_t publicKeyA, uint32_t publicKeyB, uint32_t p
 uint32_t client(uint32_t publicKeyA, uint32_t p) {
     uint32_t secretKey = 0;
     uint32_t publicKeyB = 0;
+    
     enum states {Start, WaitingForAck, DataExchange};
     states currentState = Start;
     while (true) {
@@ -236,6 +237,88 @@ uint32_t handShake(uint32_t publicKeyA, uint32_t p) {
     return secretKey;
 }
 
+uint32_t next_key(uint32_t current_key) {
+	const uint32_t modulus = 0x7FFFFFFF; // 2^31-1
+	const uint32_t consta = 48271;  // we use that consta<2^16
+	uint32_t lo = consta * (current_key & 0xFFFF);
+	uint32_t hi = consta * (current_key >> 16);
+	lo += (hi & 0x7FFF) << 16;
+	lo += hi >> 15;
+	if (lo > modulus) lo -= modulus;
+	return lo;
+}
+/*
+	The following function will read in the encrypted message from other Arduino and print it on the display
+*/
+void recieveMessage(uint32_t secretKey) {
+	// The following if statement has been implemented from the discussion in class.
+	if (Serial3.available() > 0) {
+		uint32_t incomingByte = 0;
+		// Read the encrypted message from the connected Arduino.
+		incomingByte = Serial3.read();
+		uint32_t decryptedByte = 0;
+		// Call decryption function to receive the decrypted message from encrypted.
+		decryptedByte = decryption(incomingByte, secretKey);
+		// Write the decrypted message to the user display.
+		Serial.write(decryptedByte);
+		Serial.flush();
+		Serial3.flush();
+	}
+}
+/*
+	The following function will read in the message from the serial monitor and send the encrypted.
+*/
+void sendMessage(uint32_t secretKey) {
+	// The following if statement has been implemented from the discussion in class.
+	if (Serial.available() > 0) {
+		uint32_t incomingByte = 0;
+		// Read the user input.
+		incomingByte = Serial.read();
+		// Display the user input.
+		Serial.write(incomingByte);
+		// Flush instead of delay to wait instead of immediately moving on to next block of code.
+		Serial.flush();
+		Serial3.flush();
+		// Call encryption function to generate the encrypted message to the user input.
+		uint32_t encryptedByte = 0;
+		encryptedByte = encryption(incomingByte, secretKey);
+		// The following will send the encrypted message to the connect Arduino.
+		Serial3.write(encryptedByte);
+		Serial.flush();
+		Serial3.flush();
+		// When the user presses enter, a newline character is printed and return character is sent to the other
+		// Arduino.
+		if (incomingByte == 13) {
+			Serial.write("\n");
+			Serial.flush();
+			Serial3.flush();
+			encryptedByte = encryption(10, secretKey);
+			Serial3.write(encryptedByte);
+		}
+	}
+}
+
+/*
+	The following function will take decrypt the encrypted message received using XOR encryption.
+*/
+uint32_t decryption(uint32_t incomingByte, uint32_t secretKey) {
+	// klow will be used to apply XOR with encrypted message (incomingByte).
+	uint32_t klow = powMod(secretKey, 1, 256);
+	uint32_t decryptedByte = 0;
+	decryptedByte = incomingByte ^ klow;
+	return decryptedByte;
+}
+
+/*
+	The following function will take encrypt the message to be sent using XOR encryption.
+*/
+uint32_t encryption(uint32_t incomingByte, uint32_t secretKey) {
+	// klow will be used to apply XOR with the message (incomingByte).
+	uint32_t klow = powMod(secretKey, 1, 256);
+	uint32_t encryptedByte = 0;
+	encryptedByte = incomingByte ^ klow;
+	return encryptedByte;
+}
 int main() {
     setup();
     uint32_t publicKeyA = 0;
@@ -244,5 +327,10 @@ int main() {
     secretKey = handShake(publicKeyA, 2147483647);
     Serial.flush();
     Serial3.flush();
+    while (true) {
+		sendMessage(secretKey);
+		recieveMessage(secretKey);
+        secretKey = next_key(secretKey);
+	}
     return 0;
 }
