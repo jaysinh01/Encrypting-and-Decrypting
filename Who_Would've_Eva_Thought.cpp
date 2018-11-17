@@ -70,7 +70,7 @@ uint32_t powMod(uint32_t g, uint32_t a, uint32_t p) {
 
 uint32_t publicKeyAGenerator() {
     uint32_t randomKey = 0;
-    randomKey = keyGenerator();
+    randomKey = randomKeyGenerator();
     Serial.println("Random key:");
     Serial.println(randomKey);
     Serial.flush();
@@ -124,7 +124,7 @@ uint32_t uint32_from_serial3() {
 
 uint32_t secretKeyGenerator(uint32_t publicKeyA, uint32_t publicKeyB, uint32_t p){
     uint32_t secretKey = 0;
-    secretKey = powMod(PublicKeyB, PublicKey, p);
+    secretKey = powMod(publicKeyB, publicKeyA, p);
     return secretKey;
 }
 
@@ -142,14 +142,14 @@ uint32_t client(uint32_t publicKeyA, uint32_t p) {
                 currentState = WaitingForAck;
             }
             case WaitingForAck: {
-                if (wait_on_serial3(5, 1000) == true && Serial3.read() == "A") {
+                if (wait_on_serial3(5, 1000) == true && Serial3.read() == 'A') {
                     publicKeyB = uint32_from_serial3();
                     Serial3.write("A");
-                    Serial3.flush;
+                    Serial3.flush();
                     currentState = DataExchange;
                 }
                 else {
-                    currentState == Start;
+                    currentState = Start;
                 }
             }
             case DataExchange: {
@@ -168,7 +168,7 @@ uint32_t server(uint32_t publicKeyA, uint32_t p) {
     while (true) {
         switch (currentState) {
             case Listen: {
-                while (Serial3.read() == -1 || Serial3.read() != "C") {
+                while (Serial3.read() == -1 || Serial3.read() != 'C') {
                     delay(1);
                 }
                 currentState = WaitingForKey0;
@@ -182,18 +182,18 @@ uint32_t server(uint32_t publicKeyA, uint32_t p) {
                     currentState = WaitForAck0;
                 }
                 else {
-                    currentState == Listen;
+                    currentState = Listen;
                 }
             }
             case WaitForAck0: {
-                if (wait_on_serial3(1, 1000) == true && Serial3.read() == "C") {
+                if (wait_on_serial3(1, 1000) == true && Serial3.read() == 'C') {
                     currentState = WaitingForKey1;
                 }
-                else if (wait_on_serial3(1, 1000) == true && Serial3.read() == "A") {
+                else if (wait_on_serial3(1, 1000) == true && Serial3.read() == 'A') {
                     currentState = DataExchange;
                 }
                 else {
-                    currentState == Listen;
+                    currentState = Listen;
                 }
             }
             case WaitingForKey1: {
@@ -202,18 +202,18 @@ uint32_t server(uint32_t publicKeyA, uint32_t p) {
                     currentState = WaitForAck1;
                 }
                 else {
-                    currentState == Listen;
+                    currentState = Listen;
                 }
             }
             case WaitForAck1: {
-                if (wait_on_serial3(1, 1000) == true && Serial3.read() == "C") {
+                if (wait_on_serial3(1, 1000) == true && Serial3.read() == 'C') {
                     currentState = WaitingForKey1;
                 }
-                else if (wait_on_serial3(1, 1000) == true && Serial3.read() == "A") {
+                else if (wait_on_serial3(1, 1000) == true && Serial3.read() == 'A') {
                     currentState = DataExchange;
                 }
                 else {
-                    currentState == Listen;
+                    currentState = Listen;
                 }
             }
             case DataExchange: {
