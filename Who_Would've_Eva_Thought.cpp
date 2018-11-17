@@ -240,7 +240,7 @@ int main() {
     uint32_t publicKeyA = 0;
     publicKeyA = publicKeyAGenerator();
     uint32_t secretKey = 0;
-    secretKey = handShake(publicKeyA, uint32_t 2147483647);
+    secretKey = handShake(publicKeyA, 2147483647);
     Serial.flush();
     Serial3.flush();
     return 0;
