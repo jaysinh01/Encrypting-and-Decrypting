@@ -77,6 +77,7 @@ uint32_t publicKeyAGenerator() {
     uint32_t publicKeyA = 0;
     publicKeyA = powMod(16807, randomKey, 2147483647);
     Serial.println("Public key A:");
+    Serial.println(publicKeyA);
     Serial.flush();
     return publicKeyA;
 }
