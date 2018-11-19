@@ -2,6 +2,7 @@
 
 const int analogPin = 1;
 const int handshakePin = 13;
+int cFLag = true;
 
 void setup() {
     init();
@@ -238,14 +239,18 @@ uint32_t handShake(uint32_t publicKeyA, uint32_t p) {
 }
 
 uint32_t next_key(uint32_t current_key) {
-	const uint32_t modulus = 0x7FFFFFFF; // 2^31-1
-	const uint32_t consta = 48271;  // we use that consta<2^16
-	uint32_t lo = consta * (current_key & 0xFFFF);
-	uint32_t hi = consta * (current_key >> 16);
-	lo += (hi & 0x7FFF) << 16;
-	lo += hi >> 15;
-	if (lo > modulus) lo -= modulus;
-	return lo;
+	if (cFlag){
+		return current_key;
+		cFlag = false
+	else{
+		const uint32_t modulus = 0x7FFFFFFF; // 2^31-1
+		const uint32_t consta = 48271;  // we use that consta<2^16
+		uint32_t lo = consta * (current_key & 0xFFFF);
+		uint32_t hi = consta * (current_key >> 16);
+		lo += (hi & 0x7FFF) << 16;
+		lo += hi >> 15;
+		if (lo > modulus) lo -= modulus;
+		return lo;
 }
 /*
 	The following function will read in the encrypted message from other Arduino and print it on the display
@@ -257,6 +262,8 @@ void recieveMessage(uint32_t secretKey) {
 		// Read the encrypted message from the connected Arduino.
 		incomingByte = Serial3.read();
 		uint32_t decryptedByte = 0;
+		//getting a diffrent key to imporove the security
+		secretKey = next_key(secretKey);
 		// Call decryption function to receive the decrypted message from encrypted.
 		decryptedByte = decryption(incomingByte, secretKey);
 		// Write the decrypted message to the user display.
@@ -279,6 +286,8 @@ void sendMessage(uint32_t secretKey) {
 		// Flush instead of delay to wait instead of immediately moving on to next block of code.
 		Serial.flush();
 		Serial3.flush();
+		//getting a diffrent key to imporove the security
+		secretKey = next_key(secretKey);
 		// Call encryption function to generate the encrypted message to the user input.
 		uint32_t encryptedByte = 0;
 		encryptedByte = encryption(incomingByte, secretKey);
@@ -330,7 +339,6 @@ int main() {
     while (true) {
 		sendMessage(secretKey);
 		recieveMessage(secretKey);
-        secretKey = next_key(secretKey);
 	}
     return 0;
 }
